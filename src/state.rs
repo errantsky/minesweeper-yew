@@ -12,6 +12,7 @@ pub enum CellData {
     MineNeighbor(usize),
 }
 
+#[derive(Eq, PartialEq, Clone, Copy)]
 pub enum Flag {
     Mine,
     Empty,

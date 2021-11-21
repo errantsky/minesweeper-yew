@@ -3,11 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <title>Minesweeper in Rust</title>
-</head>
-<body>
-A minesweeper game made with Rust and Yew.
-<div id="game">
+    <style>
+        #controls {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
 
-</div>
-</body>
+        #game {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: gray;
+            height: 80px;
+            width: 80px;
+            outline: 1px solid black;
+        }
+        .cell:hover {
+            background-color: white;
+        }
+        .row-container {
+            display: flex;
+            flex-direction: row;
+            /*align-content: space-evenly;*/
+            justify-content: space-between;
+
+        }
+
+        .column-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
 </html>
