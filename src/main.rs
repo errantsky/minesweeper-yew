@@ -2,14 +2,15 @@ mod state;
 
 use crate::state::{CellData, Flag, Grid};
 use gloo::timers::callback::Interval;
+use std::cmp::max;
 use yew::{events::MouseEvent, html, Callback, Component, ComponentLink, Html, ShouldRender};
 
-// ToDo: Check for winner status
 // ToDo: Add right click flagging
 // ToDo: Add logging
+// ToDo: Clear out the neighborhood of cells with no mined neighbors
 
-const NUMBER_OF_ROWS: usize = 10;
-const NUMBER_OF_COLUMNS: usize = 10;
+const NUMBER_OF_ROWS: usize = 3;
+const NUMBER_OF_COLUMNS: usize = 3;
 
 pub enum Msg {
     // User actions
@@ -27,7 +28,8 @@ pub enum Msg {
 #[derive(Eq, PartialEq)]
 pub enum GameStatus {
     Playing,
-    GameOver,
+    Lost,
+    Won,
 }
 
 pub struct Model {
@@ -37,6 +39,7 @@ pub struct Model {
     selected_flag: Flag,
     elapsed_time: usize,
     timer_handle: Option<Interval>,
+    empty_cells_left: usize,
 }
 
 impl Component for Model {
@@ -46,6 +49,7 @@ impl Component for Model {
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let state = Grid::new(NUMBER_OF_ROWS, NUMBER_OF_COLUMNS);
         let timer_link = link.clone();
+        let empty_cells_left = state.grid_vec.len() - max(state.n_rows, state.n_cols);
         Model {
             link,
             state,
@@ -55,24 +59,29 @@ impl Component for Model {
             timer_handle: Some(Interval::new(1000, move || {
                 timer_link.send_message(Msg::IncrementTimer)
             })),
+            empty_cells_left,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::Clicked(idx) => {
-                if !self.state.grid_vec[idx].is_clicked {
+                if !self.state.grid_vec[idx].is_clicked && self.play_status == GameStatus::Playing {
                     if self.state.grid_vec[idx].is_mine {
                         self.link.callback(|_| Msg::Loss).emit(());
                     } else {
                         self.state.grid_vec[idx].is_clicked = true;
+                        self.empty_cells_left -= 1;
+                        if self.empty_cells_left == 0 {
+                            self.link.callback(|_| Msg::Win).emit(());
+                        }
                     }
                     return true;
                 }
                 false
             }
             Msg::Loss => {
-                self.play_status = GameStatus::GameOver;
+                self.play_status = GameStatus::Lost;
                 self.timer_handle = None;
                 true
             }
@@ -84,6 +93,8 @@ impl Component for Model {
                 self.timer_handle = Some(Interval::new(1000, move || {
                     new_link.send_message(Msg::IncrementTimer)
                 }));
+                self.empty_cells_left =
+                    self.state.grid_vec.len() - max(self.state.n_rows, self.state.n_cols);
                 true
             }
             Msg::Flagged((idx, flag)) => {
@@ -101,6 +112,12 @@ impl Component for Model {
                 self.elapsed_time += 1;
                 true
             }
+            Msg::Win => {
+                self.timer_handle = None;
+                self.play_status = GameStatus::Won;
+
+                true
+            }
             _ => false,
         }
     }
@@ -116,6 +133,15 @@ impl Component for Model {
                     { "A minesweeper game made with Rust and Yew." }
                 </h1>
                 <div id="controls">
+                    <div id="game-status">
+                        {
+                            match self.play_status {
+                                GameStatus::Lost => String::from("🤯"),
+                                GameStatus::Won => String::from("😎"),
+                                GameStatus::Playing => String::from("🤔"),
+                            }
+                        }
+                    </div>
                     <div id="reset" onclick={ self.link.callback(|_| Msg::Reset ) }>
                         { "Reset" }
                     </div>
@@ -148,7 +174,7 @@ impl Model {
                 onclick={ self.link.callback(move |_| Msg::Clicked(cell_idx.clone())) }
             >
                 {
-                    if self.play_status == GameStatus::GameOver || self.state.grid_vec[cell_idx].is_clicked {
+                    if self.play_status == GameStatus::Lost || self.state.grid_vec[cell_idx].is_clicked {
                         match self.state.grid_vec[cell_idx].data {
                             CellData::Mine => String::from("💣"),
                             CellData::MineNeighbor(cnt) => format!("{}", cnt),
