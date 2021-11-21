@@ -21,7 +21,6 @@ pub enum Flag {
 
 pub struct Cell {
     /// A cell can be clicked on or flagged whether it has a mine or not
-    pub is_mine: bool,
     pub is_clicked: bool,
     pub flag: Option<Flag>,
     pub data: CellData,
@@ -55,7 +54,6 @@ impl Grid {
         for idx in 0..(n_rows * n_cols) {
             if mine_indices.contains(&idx) {
                 grid_vec.push(Cell {
-                    is_mine: true,
                     is_clicked: false,
                     flag: None,
                     data: CellData::Mine,
@@ -77,7 +75,6 @@ impl Grid {
                     .count();
 
                 grid_vec.push(Cell {
-                    is_mine: false,
                     is_clicked: false,
                     flag: None,
                     data: CellData::MineNeighbor(neighboring_mines_count),
@@ -274,55 +271,46 @@ mod tests {
             n_cols: 3,
             grid_vec: vec![
                 Cell {
-                    is_mine: true,
                     is_clicked: false,
                     flag: None,
                     data: CellData::Mine,
                 },
                 Cell {
-                    is_mine: false,
                     is_clicked: false,
                     flag: None,
                     data: CellData::MineNeighbor(1),
                 },
                 Cell {
-                    is_mine: false,
                     is_clicked: false,
                     flag: None,
                     data: CellData::MineNeighbor(0),
                 },
                 Cell {
-                    is_mine: false,
                     is_clicked: false,
                     flag: None,
                     data: CellData::MineNeighbor(1),
                 },
                 Cell {
-                    is_mine: false,
                     is_clicked: false,
                     flag: None,
                     data: CellData::MineNeighbor(1),
                 },
                 Cell {
-                    is_mine: false,
                     is_clicked: false,
                     flag: None,
                     data: CellData::MineNeighbor(0),
                 },
                 Cell {
-                    is_mine: false,
                     is_clicked: false,
                     flag: None,
                     data: CellData::MineNeighbor(0),
                 },
                 Cell {
-                    is_mine: false,
                     is_clicked: false,
                     flag: None,
                     data: CellData::MineNeighbor(0),
                 },
                 Cell {
-                    is_mine: false,
                     is_clicked: false,
                     flag: None,
                     data: CellData::MineNeighbor(0),

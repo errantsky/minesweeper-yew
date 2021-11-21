@@ -9,7 +9,6 @@ use yew::{events::MouseEvent, html, Component, ComponentLink, Html, ShouldRender
 // ToDo: Change background colors based on game result
 // ToDo: Add logging
 // ToDo: Fix the bug that does not let the last empty cell to reveal itself after a win
-// ToDo: Remove `is_mine` from `Grid` and only use `data` field
 
 const NUMBER_OF_ROWS: usize = 10;
 const NUMBER_OF_COLUMNS: usize = 10;
@@ -69,7 +68,7 @@ impl Component for Model {
         match msg {
             Msg::Clicked(idx) => {
                 if !self.state.grid_vec[idx].is_clicked && self.play_status == GameStatus::Playing {
-                    if self.state.grid_vec[idx].is_mine {
+                    if let CellData::Mine = self.state.grid_vec[idx].data {
                         self.link.callback(|_| Msg::Loss).emit(());
                     } else {
                         let clicked_cells_count = self.state.reveal_empty_cells(idx);
