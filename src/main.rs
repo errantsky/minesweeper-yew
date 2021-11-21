@@ -3,26 +3,24 @@ mod state;
 use crate::state::{CellData, Flag, Grid};
 use gloo_timers::callback::Interval;
 use std::cmp::max;
+use yew::services::ConsoleService;
 use yew::{events::MouseEvent, html, Component, ComponentLink, Html, ShouldRender};
 
-// ToDo: Add right click flagging
-// ToDo: Change background colors based on game result
-// ToDo: Add logging
 // ToDo: Fix the bug that does not let the last empty cell to reveal itself after a win
+// ToDo: Change background colors based on game result
+// ToDo: start timer after the first cell is clicked
+// ToDo: Put styling declarations in a separate CSS file
 
 const NUMBER_OF_ROWS: usize = 10;
 const NUMBER_OF_COLUMNS: usize = 10;
 
 pub enum Msg {
-    // User actions
-    Clicked(usize),
+    Clicked((usize, MouseEvent)),
     Flagged((usize, Flag)),
     ChangeFlag,
     Reset,
-    // Grid logic responses
     Loss,
     Win,
-    OK,
     IncrementTimer,
 }
 
@@ -55,8 +53,9 @@ impl Component for Model {
             link,
             state,
             play_status: GameStatus::Playing,
-            selected_flag: Flag::Mine,
+            selected_flag: Flag::Dig,
             elapsed_time: 0,
+            // the Interval tells the model to increment the timer every second
             timer_handle: Some(Interval::new(1000, move || {
                 timer_link.send_message(Msg::IncrementTimer)
             })),
@@ -66,23 +65,39 @@ impl Component for Model {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Clicked(idx) => {
-                if !self.state.grid_vec[idx].is_clicked && self.play_status == GameStatus::Playing {
-                    if let CellData::Mine = self.state.grid_vec[idx].data {
-                        self.link.callback(|_| Msg::Loss).emit(());
-                    } else {
-                        let clicked_cells_count = self.state.reveal_empty_cells(idx);
-                        // self.state.grid_vec[idx].is_clicked = true;
-                        self.empty_cells_left -= clicked_cells_count;
-                        if self.empty_cells_left == 0 {
-                            self.link.callback(|_| Msg::Win).emit(());
+            Msg::Clicked((idx, event)) => {
+                ConsoleService::log(format!("Processing a mouse click on cell #{}", idx).as_str());
+                match self.selected_flag {
+                    Flag::Dig => {
+                        // only reveal a cell if it has not been clicked
+                        // and the game is still progressing
+                        if !self.state.grid_vec[idx].is_clicked
+                            && self.play_status == GameStatus::Playing
+                        {
+                            ConsoleService::log(format!("Digging cell #{}.", idx).as_str());
+                            if let CellData::Mine = self.state.grid_vec[idx].data {
+                                self.link.send_message(Msg::Loss);
+                            } else {
+                                let clicked_cells_count = self.state.reveal_empty_cells(idx);
+                                self.empty_cells_left -= clicked_cells_count;
+                                if self.empty_cells_left == 0 {
+                                    self.link.send_message(Msg::Win);
+                                }
+                            }
+                            return true;
                         }
                     }
-                    return true;
+                    Flag::Tag => {
+                        ConsoleService::log(format!("Tagging cell #{}", idx).as_str());
+                        self.state.grid_vec[idx].flag = Some(self.selected_flag);
+                        return true;
+                    }
                 }
+
                 false
             }
             Msg::Loss => {
+                ConsoleService::log("Game lost.");
                 self.play_status = GameStatus::Lost;
                 self.timer_handle = None;
                 true
@@ -91,6 +106,7 @@ impl Component for Model {
                 self.play_status = GameStatus::Playing;
                 self.state = Grid::new(NUMBER_OF_ROWS, NUMBER_OF_COLUMNS);
                 self.elapsed_time = 0;
+                // dump the old timer and create a new one
                 let new_link = self.link.clone();
                 self.timer_handle = Some(Interval::new(1000, move || {
                     new_link.send_message(Msg::IncrementTimer)
@@ -104,9 +120,10 @@ impl Component for Model {
                 true
             }
             Msg::ChangeFlag => {
+                ConsoleService::log("Switching the flag.");
                 match self.selected_flag {
-                    Flag::Mine => self.selected_flag = Flag::Empty,
-                    Flag::Empty => self.selected_flag = Flag::Mine,
+                    Flag::Dig => self.selected_flag = Flag::Tag,
+                    Flag::Tag => self.selected_flag = Flag::Dig,
                 }
                 true
             }
@@ -115,12 +132,12 @@ impl Component for Model {
                 true
             }
             Msg::Win => {
+                ConsoleService::log("Game won.");
                 self.timer_handle = None;
                 self.play_status = GameStatus::Won;
 
                 true
             }
-            _ => false,
         }
     }
 
@@ -145,13 +162,15 @@ impl Component for Model {
                         }
                     </div>
                     <div id="reset" onclick={ self.link.callback(|_| Msg::Reset ) }>
+                        <button>
                         { "Reset" }
+                        </button>
                     </div>
                     <div id="flag" onclick={ self.link.callback(|_| Msg::ChangeFlag )}>
                         {
                             match self.selected_flag {
-                                Flag::Mine => String::from("🚩"),
-                                Flag::Empty => String::from("⛏"),
+                                Flag::Tag => String::from("🚩"),
+                                Flag::Dig => String::from("⛏"),
                         }
                         }
                     </div>
@@ -170,10 +189,11 @@ impl Component for Model {
 }
 
 impl Model {
+    /// Returns Html for a single grid cell
     pub fn view_cell(&self, cell_idx: usize) -> Html {
         html! {
             <div class="cell" id={ format!("cell-{}", cell_idx) }
-                onclick={ self.link.callback(move |_| Msg::Clicked(cell_idx)) }
+                onclick={ self.link.callback(move |event| Msg::Clicked((cell_idx, event))) }
             >
                 {
                     if self.play_status == GameStatus::Lost || self.state.grid_vec[cell_idx].is_clicked {
@@ -183,8 +203,8 @@ impl Model {
                         }
                     } else {
                         match self.state.grid_vec[cell_idx].flag {
-                            Some(Flag::Mine) => String::from("🚩"),
-                            Some(Flag::Empty) => String::from("⛏"),
+                            Some(Flag::Tag) => String::from("🚩"),
+                            Some(Flag::Dig) => String::from("⛏"),
                             None => String::from("❓"),
                         }
                     }
@@ -193,10 +213,8 @@ impl Model {
         }
     }
 
+    /// Returns Html for a row of cells
     pub fn view_row(&self, row_idx: usize) -> Html {
-        // let a = (0..self.state.n_cols)
-        //     .map(|col| Grid::xy_to_idx((row_idx, col), self.state.n_rows, self.state.n_cols))
-        //     .map(|idx| self.cell_view(idx));
         html! {
             <div class="row-container">
                 { for (0..self.state.n_cols)

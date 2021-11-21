@@ -15,8 +15,8 @@ pub enum CellData {
 
 #[derive(Eq, PartialEq, Clone, Copy)]
 pub enum Flag {
-    Mine,
-    Empty,
+    Dig,
+    Tag,
 }
 
 pub struct Cell {
@@ -168,6 +168,8 @@ impl Grid {
         None
     }
 
+    /// Returns the grid with clicked cells revealed
+    /// used for testing the `reveal_empty_cells`
     pub fn overlay_display(&self) -> String {
         let mut grid_string = String::new();
         for i in 0..self.n_rows {
