@@ -3,14 +3,18 @@ mod state;
 use crate::state::{CellData, Flag, Grid};
 use gloo::timers::callback::Interval;
 use std::cmp::max;
-use yew::{events::MouseEvent, html, Callback, Component, ComponentLink, Html, ShouldRender};
+use yew::{events::MouseEvent, html, Component, ComponentLink, Html, ShouldRender};
 
 // ToDo: Add right click flagging
+// ToDo: Change background colors based on game result
 // ToDo: Add logging
 // ToDo: Clear out the neighborhood of cells with no mined neighbors
+// ToDo: Might be fixed: Fix the bug that does not let the last empty cell to reveal itself after a win
+// ToDo: Remove `is_mine` from `Grid` and only use `data` field
+// ToDo: Only import gloo-time
 
-const NUMBER_OF_ROWS: usize = 3;
-const NUMBER_OF_COLUMNS: usize = 3;
+const NUMBER_OF_ROWS: usize = 10;
+const NUMBER_OF_COLUMNS: usize = 10;
 
 pub enum Msg {
     // User actions
@@ -46,7 +50,7 @@ impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let state = Grid::new(NUMBER_OF_ROWS, NUMBER_OF_COLUMNS);
         let timer_link = link.clone();
         let empty_cells_left = state.grid_vec.len() - max(state.n_rows, state.n_cols);
@@ -70,8 +74,9 @@ impl Component for Model {
                     if self.state.grid_vec[idx].is_mine {
                         self.link.callback(|_| Msg::Loss).emit(());
                     } else {
-                        self.state.grid_vec[idx].is_clicked = true;
-                        self.empty_cells_left -= 1;
+                        let clicked_cells_count = self.state.reveal_empty_cells(idx);
+                        // self.state.grid_vec[idx].is_clicked = true;
+                        self.empty_cells_left -= clicked_cells_count;
                         if self.empty_cells_left == 0 {
                             self.link.callback(|_| Msg::Win).emit(());
                         }
@@ -171,7 +176,7 @@ impl Model {
     pub fn view_cell(&self, cell_idx: usize) -> Html {
         html! {
             <div class="cell" id={ format!("cell-{}", cell_idx) }
-                onclick={ self.link.callback(move |_| Msg::Clicked(cell_idx.clone())) }
+                onclick={ self.link.callback(move |_| Msg::Clicked(cell_idx)) }
             >
                 {
                     if self.play_status == GameStatus::Lost || self.state.grid_vec[cell_idx].is_clicked {
