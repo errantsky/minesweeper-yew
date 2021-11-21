@@ -1,5 +1,8 @@
 mod grid;
+mod state;
 
 fn main() {
-    println!("Hello, world!");
+    let g = state::Grid::new(10, 10);
+
+    println!("{}", g);
 }
