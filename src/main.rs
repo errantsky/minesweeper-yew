@@ -1,11 +1,11 @@
 mod state;
 
 use crate::state::{CellData, Flag, Grid};
-use yew::{html, Component, ComponentLink, Html, ShouldRender, events::MouseEvent, Callback};
+use gloo::timers::callback::Interval;
+use yew::{events::MouseEvent, html, Callback, Component, ComponentLink, Html, ShouldRender};
 
 // ToDo: Check for winner status
 // ToDo: Add right click flagging
-// ToDo: Add timer
 // ToDo: Add logging
 
 const NUMBER_OF_ROWS: usize = 10;
@@ -21,6 +21,7 @@ pub enum Msg {
     Loss,
     Win,
     OK,
+    IncrementTimer,
 }
 
 #[derive(Eq, PartialEq)]
@@ -34,6 +35,8 @@ pub struct Model {
     state: Grid,
     play_status: GameStatus,
     selected_flag: Flag,
+    elapsed_time: usize,
+    timer_handle: Option<Interval>,
 }
 
 impl Component for Model {
@@ -42,7 +45,17 @@ impl Component for Model {
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let state = Grid::new(NUMBER_OF_ROWS, NUMBER_OF_COLUMNS);
-        Model { link, state, play_status: GameStatus::Playing, selected_flag: Flag::Mine }
+        let timer_link = link.clone();
+        Model {
+            link,
+            state,
+            play_status: GameStatus::Playing,
+            selected_flag: Flag::Mine,
+            elapsed_time: 0,
+            timer_handle: Some(Interval::new(1000, move || {
+                timer_link.send_message(Msg::IncrementTimer)
+            })),
+        }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -57,25 +70,35 @@ impl Component for Model {
                     return true;
                 }
                 false
-            },
+            }
             Msg::Loss => {
                 self.play_status = GameStatus::GameOver;
+                self.timer_handle = None;
                 true
             }
             Msg::Reset => {
                 self.play_status = GameStatus::Playing;
                 self.state = Grid::new(NUMBER_OF_ROWS, NUMBER_OF_COLUMNS);
+                self.elapsed_time = 0;
+                let new_link = self.link.clone();
+                self.timer_handle = Some(Interval::new(1000, move || {
+                    new_link.send_message(Msg::IncrementTimer)
+                }));
                 true
             }
             Msg::Flagged((idx, flag)) => {
                 self.state.grid_vec[idx].flag = Some(flag);
                 true
-            },
+            }
             Msg::ChangeFlag => {
                 match self.selected_flag {
                     Flag::Mine => self.selected_flag = Flag::Empty,
                     Flag::Empty => self.selected_flag = Flag::Mine,
                 }
+                true
+            }
+            Msg::IncrementTimer => {
+                self.elapsed_time += 1;
                 true
             }
             _ => false,
@@ -105,7 +128,7 @@ impl Component for Model {
                         }
                     </div>
                     <div id="timer">
-                        { "Timer" }
+                        { self.elapsed_time }
                     </div>
                 </div>
                 <div id="grid">
