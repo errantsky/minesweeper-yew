@@ -1,17 +1,15 @@
 mod state;
 
 use crate::state::{CellData, Flag, Grid};
-use gloo::timers::callback::Interval;
+use gloo_timers::callback::Interval;
 use std::cmp::max;
 use yew::{events::MouseEvent, html, Component, ComponentLink, Html, ShouldRender};
 
 // ToDo: Add right click flagging
 // ToDo: Change background colors based on game result
 // ToDo: Add logging
-// ToDo: Clear out the neighborhood of cells with no mined neighbors
-// ToDo: Might be fixed: Fix the bug that does not let the last empty cell to reveal itself after a win
+// ToDo: Fix the bug that does not let the last empty cell to reveal itself after a win
 // ToDo: Remove `is_mine` from `Grid` and only use `data` field
-// ToDo: Only import gloo-time
 
 const NUMBER_OF_ROWS: usize = 10;
 const NUMBER_OF_COLUMNS: usize = 10;
