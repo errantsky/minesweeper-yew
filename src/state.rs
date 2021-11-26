@@ -46,7 +46,7 @@ impl Grid {
     /// * `n_cols` - Number of columns in the grid
     pub fn new(n_rows: usize, n_cols: usize) -> Self {
         let mut grid_vec: Vec<Cell> = Vec::with_capacity((n_rows * n_cols) as usize);
-        let mine_count = max(n_rows, n_cols);
+        let mine_count = n_rows * n_cols / 3;
         let mine_indices: HashSet<usize> = HashSet::from_iter(
             (0..(n_rows * n_cols)).choose_multiple(&mut thread_rng(), mine_count),
         );
@@ -87,6 +87,13 @@ impl Grid {
             n_cols,
             grid_vec,
         }
+    }
+
+    pub fn mine_count(&self) -> usize {
+        self.grid_vec
+            .iter()
+            .filter(|c| c.data == CellData::Mine)
+            .count()
     }
 
     /// Return indices of all possible neighbors of a cell in a grid
@@ -144,7 +151,7 @@ impl Grid {
                 let mut neighbor_indices =
                     Grid::valid_neighbor_indices(cell_idx, self.n_rows, self.n_cols)
                         .into_iter()
-                        .filter(|nidx| !visited.contains(nidx))
+                        .filter(|nidx| !visited.contains(nidx) && !self.grid_vec[*nidx].is_clicked)
                         .collect();
                 to_visit.append(&mut neighbor_indices);
             }
@@ -322,5 +329,20 @@ mod tests {
         grid.grid_vec[idx].is_clicked = true;
         grid.reveal_empty_cells(idx);
         println!("{}", grid.overlay_display());
+    }
+
+    #[test]
+    ///
+    ///
+    fn test_valid_neighbor_indices() {
+        assert_eq!(Grid::valid_neighbor_indices(0, 3, 3).len(), 3);
+        assert_eq!(Grid::valid_neighbor_indices(1, 3, 3).len(), 5);
+        assert_eq!(Grid::valid_neighbor_indices(2, 3, 3).len(), 3);
+        assert_eq!(Grid::valid_neighbor_indices(3, 3, 3).len(), 5);
+        assert_eq!(Grid::valid_neighbor_indices(4, 3, 3).len(), 8);
+        assert_eq!(Grid::valid_neighbor_indices(5, 3, 3).len(), 5);
+        assert_eq!(Grid::valid_neighbor_indices(6, 3, 3).len(), 3);
+        assert_eq!(Grid::valid_neighbor_indices(7, 3, 3).len(), 5);
+        assert_eq!(Grid::valid_neighbor_indices(8, 3, 3).len(), 3);
     }
 }

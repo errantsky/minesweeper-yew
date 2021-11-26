@@ -2,7 +2,6 @@ mod state;
 
 use crate::state::{CellData, Flag, Grid};
 use gloo_timers::callback::Interval;
-use std::cmp::max;
 use yew::services::ConsoleService;
 use yew::{events::MouseEvent, html, Component, ComponentLink, Html, ShouldRender};
 
@@ -48,7 +47,8 @@ impl Component for Model {
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let state = Grid::new(NUMBER_OF_ROWS, NUMBER_OF_COLUMNS);
         let timer_link = link.clone();
-        let empty_cells_left = state.grid_vec.len() - max(state.n_rows, state.n_cols);
+        let empty_cells_left = state.grid_vec.len() - state.mine_count();
+        ConsoleService::log(state.to_string().as_str());
         Model {
             link,
             state,
@@ -79,6 +79,14 @@ impl Component for Model {
                                 self.link.send_message(Msg::Loss);
                             } else {
                                 let clicked_cells_count = self.state.reveal_empty_cells(idx);
+                                ConsoleService::log(
+                                    format!(
+                                        "Empty cells left: {}\nNewly revealed: {}",
+                                        self.empty_cells_left, clicked_cells_count
+                                    )
+                                    .as_str(),
+                                );
+                                // ToDo: bugs out
                                 self.empty_cells_left -= clicked_cells_count;
                                 if self.empty_cells_left == 0 {
                                     self.link.send_message(Msg::Win);
@@ -105,6 +113,7 @@ impl Component for Model {
             Msg::Reset => {
                 self.play_status = GameStatus::Playing;
                 self.state = Grid::new(NUMBER_OF_ROWS, NUMBER_OF_COLUMNS);
+                ConsoleService::log(self.state.to_string().as_str());
                 self.elapsed_time = 0;
                 // dump the old timer and create a new one
                 let new_link = self.link.clone();
@@ -112,7 +121,7 @@ impl Component for Model {
                     new_link.send_message(Msg::IncrementTimer)
                 }));
                 self.empty_cells_left =
-                    self.state.grid_vec.len() - max(self.state.n_rows, self.state.n_cols);
+                    self.state.grid_vec.len() - self.state.mine_count();
                 true
             }
             Msg::Flagged((idx, flag)) => {
