@@ -5,13 +5,12 @@ use gloo_timers::callback::Interval;
 use yew::services::ConsoleService;
 use yew::{events::MouseEvent, html, Component, ComponentLink, Html, ShouldRender};
 
-// ToDo: Fix the bug that does not let the last empty cell to reveal itself after a win
 // ToDo: Change background colors based on game result
-// ToDo: start timer after the first cell is clicked
-// ToDo: Put styling declarations in a separate CSS file
 
 const NUMBER_OF_ROWS: usize = 10;
 const NUMBER_OF_COLUMNS: usize = 10;
+const MINE_PROPORTION: [usize; 3] = [10, 5, 3];
+const DEFAULT_DIFFICULTY: usize = 0;
 
 pub enum Msg {
     Clicked((usize, MouseEvent)),
@@ -21,6 +20,7 @@ pub enum Msg {
     Loss,
     Win,
     IncrementTimer,
+    ChangeDifficulty,
 }
 
 #[derive(Eq, PartialEq)]
@@ -38,6 +38,7 @@ pub struct Model {
     elapsed_time: usize,
     timer_handle: Option<Interval>,
     empty_cells_left: usize,
+    selected_difficulty_idx: usize,
 }
 
 impl Component for Model {
@@ -45,7 +46,7 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let state = Grid::new(NUMBER_OF_ROWS, NUMBER_OF_COLUMNS);
+        let state = Grid::new(NUMBER_OF_ROWS, NUMBER_OF_COLUMNS, DEFAULT_DIFFICULTY);
         let timer_link = link.clone();
         let empty_cells_left = state.grid_vec.len() - state.mine_count();
         ConsoleService::log(state.to_string().as_str());
@@ -60,6 +61,7 @@ impl Component for Model {
                 timer_link.send_message(Msg::IncrementTimer)
             })),
             empty_cells_left,
+            selected_difficulty_idx: DEFAULT_DIFFICULTY,
         }
     }
 
@@ -112,7 +114,11 @@ impl Component for Model {
             }
             Msg::Reset => {
                 self.play_status = GameStatus::Playing;
-                self.state = Grid::new(NUMBER_OF_ROWS, NUMBER_OF_COLUMNS);
+                self.state = Grid::new(
+                    NUMBER_OF_ROWS,
+                    NUMBER_OF_COLUMNS,
+                    self.selected_difficulty_idx,
+                );
                 ConsoleService::log(self.state.to_string().as_str());
                 self.elapsed_time = 0;
                 // dump the old timer and create a new one
@@ -120,8 +126,7 @@ impl Component for Model {
                 self.timer_handle = Some(Interval::new(1000, move || {
                     new_link.send_message(Msg::IncrementTimer)
                 }));
-                self.empty_cells_left =
-                    self.state.grid_vec.len() - self.state.mine_count();
+                self.empty_cells_left = self.state.grid_vec.len() - self.state.mine_count();
                 true
             }
             Msg::Flagged((idx, flag)) => {
@@ -144,6 +149,26 @@ impl Component for Model {
                 ConsoleService::log("Game won.");
                 self.timer_handle = None;
                 self.play_status = GameStatus::Won;
+
+                true
+            }
+            Msg::ChangeDifficulty => {
+                self.selected_difficulty_idx =
+                    (self.selected_difficulty_idx + 1).rem_euclid(MINE_PROPORTION.len());
+                self.play_status = GameStatus::Playing;
+                self.state = Grid::new(
+                    NUMBER_OF_ROWS,
+                    NUMBER_OF_COLUMNS,
+                    self.selected_difficulty_idx,
+                );
+                ConsoleService::log(self.state.to_string().as_str());
+                self.elapsed_time = 0;
+                // dump the old timer and create a new one
+                let new_link = self.link.clone();
+                self.timer_handle = Some(Interval::new(1000, move || {
+                    new_link.send_message(Msg::IncrementTimer)
+                }));
+                self.empty_cells_left = self.state.grid_vec.len() - self.state.mine_count();
 
                 true
             }
@@ -173,6 +198,17 @@ impl Component for Model {
                     <div id="reset" onclick={ self.link.callback(|_| Msg::Reset ) }>
                         <button>
                         { "Reset" }
+                        </button>
+                    </div>
+                    <div id="current-difficulty">
+                        {
+                            format!("Mines/Cells: 1/{}",
+                                MINE_PROPORTION[self.selected_difficulty_idx])
+                        }
+                    </div>
+                    <div id="change-difficulty" onclick={ self.link.callback(|_| Msg::ChangeDifficulty ) }>
+                        <button>
+                        { "Change difficulty" }
                         </button>
                     </div>
                     <div id="flag" onclick={ self.link.callback(|_| Msg::ChangeFlag )}>

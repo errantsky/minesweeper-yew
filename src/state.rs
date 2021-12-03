@@ -1,9 +1,12 @@
 use std::cmp::max;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use std::ops::Rem;
 
+use crate::MINE_PROPORTION;
 use rand::seq::IteratorRandom;
 use rand::thread_rng;
+use yew::services::ConsoleService;
 
 #[derive(Eq, PartialEq)]
 pub enum CellData {
@@ -44,9 +47,11 @@ impl Grid {
     /// # Arguments
     /// * `n_rows` - Number of rows in the grid
     /// * `n_cols` - Number of columns in the grid
-    pub fn new(n_rows: usize, n_cols: usize) -> Self {
+    pub fn new(n_rows: usize, n_cols: usize, mine_prop_idx: usize) -> Self {
         let mut grid_vec: Vec<Cell> = Vec::with_capacity((n_rows * n_cols) as usize);
-        let mine_count = n_rows * n_cols / 3;
+        let mine_count =
+            n_rows * n_cols / MINE_PROPORTION[mine_prop_idx.rem_euclid(MINE_PROPORTION.len())];
+        ConsoleService::log(&format!("{} mines in the grid.", mine_count));
         let mine_indices: HashSet<usize> = HashSet::from_iter(
             (0..(n_rows * n_cols)).choose_multiple(&mut thread_rng(), mine_count),
         );
@@ -262,7 +267,7 @@ mod tests {
 
     #[test]
     fn test_overlay_display() {
-        let grid = Grid::new(3, 3);
+        let grid = Grid::new(3, 3, 0);
         println!("{}", grid.overlay_display());
         assert_eq!(grid.overlay_display(), "? ? ? \n? ? ? \n? ? ? \n");
     }
