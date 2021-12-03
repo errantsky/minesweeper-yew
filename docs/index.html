@@ -1,0 +1,48 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8">
+    <title>Minesweeper in Rust</title>
+    <style>
+        #controls {
+            width: 400px;
+            display: flex;
+            flex-direction: row;
+            /*align-items: center;*/
+            justify-content: space-between;
+        }
+
+        #game {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: gray;
+            height: 80px;
+            width: 80px;
+            outline: 1px solid black;
+        }
+        .cell:hover {
+            background-color: white;
+        }
+        .row-container {
+            display: flex;
+            flex-direction: row;
+            /*align-content: space-evenly;*/
+            justify-content: space-between;
+
+        }
+
+        .column-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+
+<link rel="preload" href="/index-ad7998f565c31c22_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+<link rel="modulepreload" href="/index-ad7998f565c31c22.js"></head>
+<body><script type="module">import init from '/index-ad7998f565c31c22.js';init('/index-ad7998f565c31c22_bg.wasm');</script></body></html>
